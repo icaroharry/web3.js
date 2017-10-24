@@ -1,4 +1,4 @@
-import { BigNumber } from 'bignumber.js' // TODO change to BN
+import { BigNumber } from 'bn.js'
 import * as us from 'underscore'
 
 
@@ -18,7 +18,7 @@ export declare interface JsonRPCResponse {
 
 type Callback<T> = (error: Error, result: T) => void
 type ABIDataTypes = "uint256" | "boolean" | "string" | "bytes" | string // TODO complete list
-export declare interface Provider {
+export declare interface IProvider {
   send(payload: JsonRPCRequest, callback: (e: Error, val: JsonRPCResponse) => void)
 }
 type PromiEventType = "transactionHash" | "receipt" | "confirmation" | "error"
@@ -40,7 +40,6 @@ export declare interface EventEmitter {
   on(type: "error", handler: (error: Error) => void): EventEmitter
   on(type: "error" | "data" | "changed", handler: (error: Error | TransactionReceipt | string) => void): EventEmitter
 }
-
 export declare interface TransactionObject<T> {
   arguments: any[]
   call(tx?: Tx): Promise<T>
@@ -69,8 +68,6 @@ export declare interface CompileResult {
   }
   userDoc: { methods: object }
   developerDoc: { methods: object }
-
-
 }
 export declare interface Transaction {
   hash: string
@@ -112,22 +109,6 @@ export declare interface TransactionReceipt {
   logs?: Array<Log>
   events?: {
     [eventName: string]: EventLog
-  },
-  status: string
-}
-export declare interface EncodedTransaction {
-  raw: string,
-  tx: {
-    nonce: string,
-    gasPrice: string,
-    gas: string,
-    to: string,
-    value: string,
-    input: string,
-    v: string,
-    r: string,
-    s: string,
-    hash: string
   }
 }
 export declare interface BlockHeader {
@@ -157,7 +138,6 @@ export declare interface Logs {
   fromBlock?: number
   address?: string
   topics?: Array<string | string[]>
-
 }
 export declare interface Log {
   address: string
@@ -230,11 +210,24 @@ export declare interface Tx {
   value?: string | number
   gas?: string | number
   gasPrice?: string | number
-
 }
-export declare interface WebsocketProvider extends Provider { }
-export declare interface HttpProvider extends Provider { }
-export declare interface IpcProvider extends Provider { }
+export declare interface WebsocketProvider extends IProvider {
+  responseCallbacks: object
+  notificationCallbacks: [() => any]
+  connection: {
+    onclose(e: any): void,
+    onmessage(e: any): void,
+    onerror(e?: any): void
+  }
+  addDefaultEvents: () => void
+  on(type: string, callback: () => any): void
+  removeListener(type: string, callback: () => any): void
+  removeAllListeners(type: string): void
+  reset(): void
+}
+export declare interface HttpProvider extends IProvider { }
+export declare interface IpcProvider extends IProvider { }
+export type Provider = WebsocketProvider & IpcProvider & HttpProvider;
 type Unit = "kwei" | "femtoether" | "babbage" | "mwei" | "picoether" | "lovelace" | "qwei" | "nanoether" | "shannon" | "microether" | "szabo" | "nano" | "micro" | "milliether" | "finney" | "milli" | "ether" | "kether" | "grand" | "mether" | "gether" | "tether"
 export type BlockType = "latest" | "pending" | "genesis" | number
 export declare interface Iban { }
@@ -274,17 +267,13 @@ export declare interface Utils {
   toDecimal(val: any): number
   toHex(val: any): string
   toUtf8(val: any): string
-  toWei(val: string | number | BigNumber, unit: Unit): string | BigNumber
+  toWei(val: string | number | BigNumber, unit?: Unit): string | BigNumber
   unitMap: any
 }
 export declare interface Contract {
   options: {
     address: string
     jsonInterface: ABIDefinition[]
-    data: string
-    from: string
-    gasPrice: string
-    gas: number
   }
   methods: {
     [fnName: string]: (...args) => TransactionObject<any>
@@ -333,7 +322,7 @@ export declare class Eth {
   }
   accounts: {
     'new'(entropy?: string): Account
-    privateKeyToAccount(privKey: string): Account
+    privateToAccount(privKey: string): Account
     publicToAddress(key: string): string
     signTransaction(tx: Tx, privateKey: string, returnSignature?: boolean, cb?: (err: Error, result: string | Signature) => void): Promise<string> | Signature
     recoverTransaction(signature: string | Signature): string
@@ -364,7 +353,7 @@ export declare class Eth {
     lll(source: string, callback?: Callback<CompileResult>): Promise<CompileResult>
     serpent(source: string, callback?: Callback<CompileResult>): Promise<CompileResult>
   }
-  currentProvider: Provider
+  currentProvider: Provider;
   estimateGas(tx: Tx, callback?: Callback<number>): Promise<number>
   getAccounts(cb?: Callback<Array<string>>): Promise<Array<string>>
   getBalance(address: string, defaultBlock?: BlockType, cb?: Callback<number>): Promise<number>
@@ -396,7 +385,6 @@ export declare class Eth {
   isSyncing(cb?: Callback<boolean>): Promise<boolean>
   net: Net
   personal: Personal
-  signTransaction(tx: Tx, address?: string, cb?: Callback<string>): Promise<EncodedTransaction>
   sendSignedTransaction(data: string, cb?: Callback<string>): PromiEvent<TransactionReceipt>
   sendTransaction(tx: Tx, cb?: Callback<string>): PromiEvent<TransactionReceipt>
   submitWork(nonce: string, powHash: string, digest: string, cb?: Callback<boolean>): Promise<boolean>
@@ -422,4 +410,3 @@ export declare class BatchRequest {
   add(request: Request): void //
   execute(): void
 }
-
